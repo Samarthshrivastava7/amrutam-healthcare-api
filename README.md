@@ -15,7 +15,7 @@ A modular FastAPI backend for patient identity, doctor discovery, appointment bo
 ## Current capabilities
 
 - Patient registration, login and current-user endpoint
-- Admin-controlled doctor profile creation and public active-doctor discovery/filtering
+- Admin-controlled doctor profile creation and public active-doctor discovery/filtering\n- Doctor-owned future availability windows, overlap validation, and public time-window discovery\n- Booking validation against published slot start times once a doctor has configured availability
 - Patient appointment booking/cancellation and patient/assigned-doctor record access
 - Idempotency-key replay handling for appointment writes
 - Assigned-doctor consultation lifecycle and prescription creation/retrieval
@@ -91,7 +91,7 @@ Do not expose PostgreSQL publicly. Back up and verify the target database before
 |---|---|
 | Health | GET /, GET /health/live, GET /health/ready, GET /health |
 | Authentication | POST /auth/register, POST /auth/login, GET /auth/me |
-| Doctors | GET /doctors/, GET /doctors/{doctor_id}, POST /doctors/ (admin only) |
+| Doctors | GET /doctors/, GET /doctors/{doctor_id}, POST /doctors/ (admin only), POST /doctors/me/availability (doctor), GET /doctors/{doctor_id}/availability |
 | Appointments | POST /appointments/, GET /appointments/me, GET /appointments/{appointment_id}, POST /appointments/{appointment_id}/cancel |
 | Consultations | POST /consultations/, GET /consultations/me, PATCH /consultations/{consultation_id}, POST /consultations/{consultation_id}/complete |
 | Prescriptions | POST /prescriptions/, GET /prescriptions/me |
@@ -128,7 +128,7 @@ Override the target with BASE_URL when needed.
 
 Implemented controls include Argon2 password hashes, expiring JWTs, startup validation for token configuration, fixed patient role during public registration, admin-only doctor profile creation, role-scoped data access, typed schemas, and generic readiness errors.
 
-Before real patient data or production use, complete and verify TLS/host restrictions, managed secret rotation, login/registration rate limiting, privileged-account MFA, clinical-record audit logging, retention policy, dependency/secret scanning, operational alerting, and encrypted backup/restore drills. Doctor availability windows and overlapping interval scheduling, payments, admin analytics, distributed rate limiting, and a configured production telemetry backend are not currently represented as complete features. The project does not claim regulatory compliance or a 99.95% availability guarantee.
+Before real patient data or production use, complete and verify TLS/host restrictions, managed secret rotation, login/registration rate limiting, privileged-account MFA, clinical-record audit logging, retention policy, dependency/secret scanning, operational alerting, and encrypted backup/restore drills. Availability slots and basic overlap checks are implemented. Database-level protection against concurrent overlapping availability creation still needs PostgreSQL-specific validation; booking slot enforcement is enabled for doctors who have published slots, while legacy doctors with no slots remain bookable for compatibility. Payments, admin analytics, distributed rate limiting, privileged-account MFA, clinical-record audit logging, and a configured production telemetry backend are not currently represented as complete features. The project does not claim regulatory compliance or a 99.95% availability guarantee.
 
 ## Demo safety
 
