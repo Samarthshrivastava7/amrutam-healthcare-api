@@ -39,10 +39,10 @@ baseline = load_migration(BASELINE_PATH, "amrutam_baseline_migration")
 doctor_link = load_migration(DOCTOR_LINK_PATH, "amrutam_doctor_link_migration")
 
 
-def run_migration(connection, migration):
+def run_migration(connection, migration, direction="upgrade"):
     context = MigrationContext.configure(connection)
     with Operations.context(context):
-        migration.upgrade()
+        getattr(migration, direction)()
 
 
 def test_fresh_database_can_upgrade_to_current_schema():
