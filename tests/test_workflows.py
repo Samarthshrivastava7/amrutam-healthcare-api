@@ -102,7 +102,6 @@ def create_doctor_account(session_factory, email="doctor@example.com"):
         db.commit()
         doctor_id = doctor.id
 
-    logged_in = session_factory  # Keep the helper independent of the client instance.
     return doctor_id
 
 
