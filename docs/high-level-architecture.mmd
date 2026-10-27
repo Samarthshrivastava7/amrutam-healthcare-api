@@ -1,0 +1,10 @@
+flowchart LR
+    Client[Web or mobile client] --> Edge[TLS proxy and rate limits]
+    Edge --> API[FastAPI modular monolith]
+    API --> Auth[JWT and object authorization]
+    API --> ORM[SQLAlchemy request session]
+    ORM --> DB[(PostgreSQL)]
+    API --> Logs[Privacy-safe structured logs]
+    API -. OTLP export to configure .-> Obs[Metrics, traces and alerts]
+    DB --> Backup[Encrypted managed backups]
+    Worker[Future durable job worker] -. async jobs .-> DB
