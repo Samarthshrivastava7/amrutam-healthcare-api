@@ -1,0 +1,18 @@
+sequenceDiagram
+    actor Patient
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    Patient->>API: POST /appointments with Idempotency-Key
+    API->>API: Validate JWT, patient role, body and future timezone-aware instant
+    API->>DB: Lookup idempotency key
+    alt Identical prior request
+        DB-->>API: Existing appointment
+        API-->>Patient: Original appointment response
+    else Key reused with different request
+        API-->>Patient: 409 Conflict
+    else New request
+        API->>DB: Check active doctor and exact-time conflicts
+        API->>DB: Insert appointment and commit transaction
+        DB-->>API: Persisted appointment
+        API-->>Patient: 201 Created
+    end
