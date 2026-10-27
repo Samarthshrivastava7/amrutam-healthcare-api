@@ -72,10 +72,19 @@ def book_appointment(
             )
         )
         if previous:
+            previous_scheduled_at = previous.scheduled_at
+            if previous_scheduled_at.tzinfo is None:
+                # SQLite drops timezone metadata; persisted values are UTC by contract.
+                previous_scheduled_at = previous_scheduled_at.replace(
+                    tzinfo=timezone.utc
+                )
+            else:
+                previous_scheduled_at = previous_scheduled_at.astimezone(timezone.utc)
+
             if (
                 previous.patient_id == current_user.id
                 and previous.doctor_id == data.doctor_id
-                and previous.scheduled_at == scheduled_at
+                and previous_scheduled_at == scheduled_at
             ):
                 return previous
 
