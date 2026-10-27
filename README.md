@@ -118,7 +118,10 @@ Override the target with BASE_URL when needed.
 - [Security checklist and threat model](docs/threat-model.md)
 - [Observability plan](docs/observability.md)
 - [Operations runbook](docs/operations-runbook.md)
+- [High-level architecture diagram](docs/high-level-architecture.mmd)
+- [ER diagram for implemented core entities](docs/er-diagram.mmd)
 - [Booking sequence diagram source](docs/booking-sequence.mmd)
+- [Design decisions: retries, caching, concurrency, partitioning and DR](docs/design-decisions.md)
 - [Render Blueprint starter](infra/render.yaml)
 
 ## Security and production readiness
