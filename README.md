@@ -47,14 +47,24 @@ A FastAPI backend for patient registration and authentication, doctor discovery,
    ACCESS_TOKEN_EXPIRE_MINUTES=30
    ```
 
-5. Apply migrations only after confirming the target database and its current Alembic revision:
+5. Initialize or migrate the database using the correct path below. **Do not run the fresh-database commands against a database that already contains data. Back up and verify the target database first.**
+
+   **Brand-new, empty database only:** the baseline migration represents an existing schema, so `alembic upgrade head` alone does not create the tables. Create the current schema from the models, then mark the migration history as applied:
+
+   ```powershell
+   python .\create_tables.py
+   alembic stamp head
+   alembic current
+   ```
+
+   **Existing database with the application's tables:** verify the database and revision before applying migrations:
 
    ```powershell
    alembic current
    alembic upgrade head
    ```
 
-   The first migration is a baseline for an existing schema and contains no table-creation operations. Do not run migrations against a database you have not backed up or verified.
+   If the schema is partially initialized or the revision is unexpected, stop and inspect it instead of stamping or upgrading blindly. The baseline migration is intentionally a no-op for existing schemas.
 
 6. Start the API from the project root:
 
@@ -93,6 +103,8 @@ Run the automated tests from the project root:
 ```powershell
 python -m pytest -q
 ```
+
+GitHub Actions runs the same test suite on pushes to `main` and `fix/**` branches and on pull requests targeting `main`.
 
 ## Security notes
 
