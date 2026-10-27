@@ -19,7 +19,7 @@ except ValueError as exc:
 if not JWT_SECRET_KEY:
     raise RuntimeError("JWT_SECRET_KEY is missing from .env")
 
-if "replace-with" in JWT_SECRET_KEY.lower() or "change-me" in JWT_SECRET_KEY.lower():
+if "replace" in JWT_SECRET_KEY.lower() or "change-me" in JWT_SECRET_KEY.lower():
     raise RuntimeError(
         "JWT_SECRET_KEY is still a placeholder; configure a unique random secret"
     )
