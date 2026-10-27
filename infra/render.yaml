@@ -1,0 +1,26 @@
+# Starter template only. Review service sizing, network access, backups and secrets before non-test use.
+databases:
+  - name: amrutam-healthcare-db
+    plan: basic-256mb
+    databaseName: amrutam_healthcare
+    user: amrutam_app
+    ipAllowList: []
+services:
+  - type: web
+    name: amrutam-healthcare-api
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health/ready
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: amrutam-healthcare-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
