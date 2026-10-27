@@ -102,3 +102,13 @@ def test_readiness_endpoint_returns_503_when_database_is_unavailable(client):
     assert body["status"] == "unavailable"
     assert body["database"] == "unavailable"
     assert "synthetic database outage" not in response.text
+
+
+def test_response_includes_request_id_and_security_headers(client):
+    response = client.get("/health/live")
+
+    assert response.status_code == 200
+    assert response.headers.get("X-Request-ID")
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
