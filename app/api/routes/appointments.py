@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -21,6 +21,27 @@ def require_patient(user: User) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Patient account required",
         )
+
+
+def require_doctor(user: User, db: Session) -> Doctor:
+    if user.role != UserRole.DOCTOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor account required",
+        )
+
+    doctor = db.scalar(
+        select(Doctor).where(
+            Doctor.user_id == user.id,
+            Doctor.is_active.is_(True),
+        )
+    )
+    if doctor is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No active doctor profile linked",
+        )
+    return doctor
 
 
 @router.post(
@@ -51,10 +72,19 @@ def book_appointment(
             )
         )
         if previous:
+            previous_scheduled_at = previous.scheduled_at
+            if previous_scheduled_at.tzinfo is None:
+                # SQLite drops timezone metadata; persisted values are UTC by contract.
+                previous_scheduled_at = previous_scheduled_at.replace(
+                    tzinfo=timezone.utc
+                )
+            else:
+                previous_scheduled_at = previous_scheduled_at.astimezone(timezone.utc)
+
             if (
                 previous.patient_id == current_user.id
                 and previous.doctor_id == data.doctor_id
-                and previous.scheduled_at == scheduled_at
+                and previous_scheduled_at == scheduled_at
             ):
                 return previous
 
@@ -63,7 +93,7 @@ def book_appointment(
                 detail="Idempotency key has already been used",
             )
 
-    # Lock the doctor row while checking and creating the booking.
+    # Serialize bookings for this doctor on databases that support row locks.
     doctor = db.scalar(
         select(Doctor)
         .where(
@@ -132,13 +162,21 @@ def list_my_appointments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_patient(current_user)
+    """List only appointments belonging to the authenticated patient or doctor."""
+    if current_user.role == UserRole.PATIENT:
+        statement = select(Appointment).where(
+            Appointment.patient_id == current_user.id
+        )
+    elif current_user.role == UserRole.DOCTOR:
+        doctor = require_doctor(current_user, db)
+        statement = select(Appointment).where(Appointment.doctor_id == doctor.id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Patient or doctor account required",
+        )
 
-    statement = (
-        select(Appointment)
-        .where(Appointment.patient_id == current_user.id)
-        .order_by(Appointment.scheduled_at.desc())
-    )
+    statement = statement.order_by(Appointment.scheduled_at.desc())
     return list(db.scalars(statement).all())
 
 
@@ -148,15 +186,26 @@ def get_my_appointment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_patient(current_user)
+    """Return an appointment only when the caller is its patient or assigned doctor."""
+    if current_user.role == UserRole.PATIENT:
+        ownership_filter = Appointment.patient_id == current_user.id
+    elif current_user.role == UserRole.DOCTOR:
+        doctor = require_doctor(current_user, db)
+        ownership_filter = Appointment.doctor_id == doctor.id
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Patient or doctor account required",
+        )
 
     appointment = db.scalar(
         select(Appointment).where(
             Appointment.id == appointment_id,
-            Appointment.patient_id == current_user.id,
+            ownership_filter,
         )
     )
     if appointment is None:
+        # Deliberately do not reveal whether another user's appointment exists.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Appointment not found",

@@ -1,6 +1,6 @@
-﻿from datetime import datetime
+from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ConsultationStart(BaseModel):
@@ -9,6 +9,11 @@ class ConsultationStart(BaseModel):
 
 class ConsultationUpdate(BaseModel):
     notes: str = Field(min_length=1, max_length=10000)
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def normalize_notes(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
 
 class ConsultationResponse(BaseModel):
