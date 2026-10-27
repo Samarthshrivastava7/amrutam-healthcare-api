@@ -1,0 +1,41 @@
+erDiagram
+    USERS ||--o| DOCTORS : linked_account
+    USERS ||--o{ APPOINTMENTS : patient
+    DOCTORS ||--o{ APPOINTMENTS : provider
+    APPOINTMENTS ||--o| CONSULTATIONS : encounter
+    CONSULTATIONS ||--o{ PRESCRIPTIONS : creates
+    USERS {
+      int id PK
+      string email UK
+      string password_hash
+      string role
+      boolean is_active
+    }
+    DOCTORS {
+      int id PK
+      int user_id FK_UK
+      string full_name
+      string specialization
+      boolean is_active
+    }
+    APPOINTMENTS {
+      int id PK
+      int patient_id FK
+      int doctor_id FK
+      datetime scheduled_at
+      string status
+      string idempotency_key UK
+    }
+    CONSULTATIONS {
+      int id PK
+      int appointment_id FK_UK
+      text notes
+      datetime started_at
+      datetime completed_at
+    }
+    PRESCRIPTIONS {
+      int id PK
+      int consultation_id FK
+      text medication_details
+      text instructions
+    }
