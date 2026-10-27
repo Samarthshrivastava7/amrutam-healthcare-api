@@ -298,3 +298,58 @@ def test_booking_idempotency_and_doctor_time_conflict(workflow_client):
         when=when,
     )
     assert conflict.status_code == 409
+
+
+def test_same_patient_cannot_book_two_doctors_at_same_time(workflow_client):
+    client, session_factory = workflow_client
+    patient_auth = register_and_login_patient(client)
+    first_doctor_id = create_doctor_account(session_factory, "doctor1@example.com")
+    second_doctor_id = create_doctor_account(session_factory, "doctor2@example.com")
+    first, when = book_appointment(client, patient_auth, first_doctor_id)
+    assert first.status_code == 201, first.text
+
+    conflict, _ = book_appointment(
+        client, patient_auth, second_doctor_id, when=when
+    )
+    assert conflict.status_code == 409
+
+
+def test_idempotency_key_cannot_be_reused_for_different_booking(workflow_client):
+    client, session_factory = workflow_client
+    patient_auth = register_and_login_patient(client)
+    doctor_id = create_doctor_account(session_factory)
+    first, when = book_appointment(
+        client, patient_auth, doctor_id, idempotency_key="reuse-key-001"
+    )
+    assert first.status_code == 201, first.text
+
+    different_time = (
+        datetime.fromisoformat(when) + timedelta(hours=1)
+    ).isoformat()
+    conflict, _ = book_appointment(
+        client,
+        patient_auth,
+        doctor_id,
+        when=different_time,
+        idempotency_key="reuse-key-001",
+    )
+    assert conflict.status_code == 409
+
+
+def test_cancelled_doctor_slot_can_be_booked_again(workflow_client):
+    client, session_factory = workflow_client
+    patient_auth = register_and_login_patient(client)
+    another_patient = register_and_login_patient(client, "replacement@example.com")
+    doctor_id = create_doctor_account(session_factory)
+    first, when = book_appointment(client, patient_auth, doctor_id)
+    assert first.status_code == 201, first.text
+
+    cancelled = client.post(
+        f"/appointments/{first.json()['id']}/cancel", headers=patient_auth
+    )
+    assert cancelled.status_code == 200, cancelled.text
+
+    replacement, _ = book_appointment(
+        client, another_patient, doctor_id, when=when
+    )
+    assert replacement.status_code == 201, replacement.text
