@@ -38,11 +38,11 @@ A FastAPI backend for patient registration and authentication, doctor discovery,
    Copy-Item .env.example .env
    ```
 
-4. Edit `.env` locally and set a real PostgreSQL URL and a strong, unique JWT secret. Never commit `.env` or share credentials in chat.
+4. Edit `.env` locally and set a real PostgreSQL URL and a unique random JWT secret of at least 32 bytes. The example secret is deliberately rejected by the application until you replace it. Never commit `.env` or share credentials in chat.
 
    ```env
    DATABASE_URL=postgresql+psycopg://USERNAME:PASSWORD@HOST:5432/DATABASE
-   JWT_SECRET_KEY=replace-with-a-long-random-secret
+   JWT_SECRET_KEY=REPLACE_WITH_A_UNIQUE_RANDOM_SECRET_OF_AT_LEAST_32_BYTES
    JWT_ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=30
    ```
@@ -87,11 +87,11 @@ A FastAPI backend for patient registration and authentication, doctor discovery,
 
 | Area | Endpoints |
 | --- | --- |
-| Health | `GET /`, `GET /health` |
+| Health | `GET /`, `GET /health/live` (process liveness), `GET /health` and `GET /health/ready` (database readiness) |
 | Authentication | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
 | Doctors | `GET /doctors/`, `GET /doctors/{doctor_id}`, `POST /doctors/` (admin only) |
-| Appointments | `POST /appointments/`, `GET /appointments/me`, `GET /appointments/{appointment_id}`, `POST /appointments/{appointment_id}/cancel` |
-| Consultations | `POST /consultations/`, `GET /consultations/me`, `POST /consultations/{consultation_id}/complete` |
+| Appointments | `POST /appointments/`, `GET /appointments/me` (patient's or assigned doctor's appointments), `GET /appointments/{appointment_id}` (owner/assigned doctor only), `POST /appointments/{appointment_id}/cancel` (patient only) |
+| Consultations | `POST /consultations/`, `GET /consultations/me`, `PATCH /consultations/{consultation_id}` (assigned doctor, before finalization), `POST /consultations/{consultation_id}/complete` |
 | Prescriptions | `POST /prescriptions/`, `GET /prescriptions/me` |
 
 Use the Swagger `Authorize` control with a bearer access token for protected endpoints. Public registration creates patient accounts; doctor/admin provisioning should be handled through a trusted administrative process.
@@ -104,7 +104,7 @@ Run the automated tests from the project root:
 python -m pytest -q
 ```
 
-GitHub Actions runs the same test suite on pushes to `main` and `fix/**` branches and on pull requests targeting `main`.
+GitHub Actions runs the same test suite on pushes to `main` and `fix/**` branches and on pull requests targeting `main`. The suite includes isolated SQLite-backed API tests for authentication, validation, role-scoped appointment access, consultation finalization, prescription access, idempotency, and database-readiness failure handling. These tests do not connect to or modify a production database.
 
 ## Security notes
 
