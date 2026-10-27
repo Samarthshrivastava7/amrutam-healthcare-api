@@ -116,6 +116,11 @@ def downgrade() -> None:
     ]
 
     if bind.dialect.name == "sqlite":
+        # Drop independent indexes before SQLite rebuilds the table; the rebuild
+        # may remove indexed columns and the associated indexes.
+        for index in user_id_indexes:
+            if index.get("name"):
+                op.drop_index(index["name"], table_name="doctors")
         with op.batch_alter_table("doctors") as batch_op:
             if foreign_keys and foreign_keys[0].get("name"):
                 batch_op.drop_constraint(
@@ -123,9 +128,6 @@ def downgrade() -> None:
                     type_="foreignkey",
                 )
             batch_op.drop_column("user_id")
-        for index in user_id_indexes:
-            if index.get("name"):
-                op.drop_index(index["name"], table_name="doctors")
         return
 
     for foreign_key in foreign_keys:
