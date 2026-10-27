@@ -13,6 +13,7 @@ from app.models.doctor import Doctor
 from app.models.appointment import Appointment
 from app.models.consultation import Consultation
 from app.models.prescription import Prescription
+from app.models.availability_slot import AvailabilitySlot
 
 load_dotenv()
 
