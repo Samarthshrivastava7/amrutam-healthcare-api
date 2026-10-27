@@ -353,3 +353,83 @@ def test_cancelled_doctor_slot_can_be_booked_again(workflow_client):
         client, another_patient, doctor_id, when=when
     )
     assert replacement.status_code == 201, replacement.text
+
+
+def test_doctor_publishes_availability_and_booking_uses_published_slot(workflow_client):
+    client, session_factory = workflow_client
+    patient_auth = register_and_login_patient(client)
+    doctor_id = create_doctor_account(session_factory)
+    doctor_auth = doctor_headers(client)
+    starts_at = (datetime.now(timezone.utc) + timedelta(days=8)).replace(
+        microsecond=0
+    )
+    ends_at = starts_at + timedelta(minutes=30)
+
+    published = client.post(
+        "/doctors/me/availability",
+        headers=doctor_auth,
+        json={"starts_at": starts_at.isoformat(), "ends_at": ends_at.isoformat()},
+    )
+    assert published.status_code == 201, published.text
+    slot = published.json()
+    assert slot["doctor_id"] == doctor_id
+
+    listed = client.get(f"/doctors/{doctor_id}/availability")
+    assert listed.status_code == 200, listed.text
+    assert any(item["id"] == slot["id"] for item in listed.json())
+
+    outside_slot = starts_at + timedelta(hours=1)
+    rejected, _ = book_appointment(
+        client, patient_auth, doctor_id, when=outside_slot.isoformat()
+    )
+    assert rejected.status_code == 409
+
+    accepted, _ = book_appointment(
+        client, patient_auth, doctor_id, when=starts_at.isoformat()
+    )
+    assert accepted.status_code == 201, accepted.text
+
+
+def test_doctor_cannot_publish_overlapping_availability(workflow_client):
+    client, session_factory = workflow_client
+    create_doctor_account(session_factory)
+    doctor_auth = doctor_headers(client)
+    starts_at = (datetime.now(timezone.utc) + timedelta(days=9)).replace(
+        microsecond=0
+    )
+    first = client.post(
+        "/doctors/me/availability",
+        headers=doctor_auth,
+        json={
+            "starts_at": starts_at.isoformat(),
+            "ends_at": (starts_at + timedelta(minutes=30)).isoformat(),
+        },
+    )
+    assert first.status_code == 201, first.text
+
+    overlap = client.post(
+        "/doctors/me/availability",
+        headers=doctor_auth,
+        json={
+            "starts_at": (starts_at + timedelta(minutes=15)).isoformat(),
+            "ends_at": (starts_at + timedelta(minutes=45)).isoformat(),
+        },
+    )
+    assert overlap.status_code == 409
+
+
+def test_patient_cannot_publish_doctor_availability(workflow_client):
+    client, _ = workflow_client
+    patient_auth = register_and_login_patient(client)
+    starts_at = (datetime.now(timezone.utc) + timedelta(days=10)).replace(
+        microsecond=0
+    )
+    response = client.post(
+        "/doctors/me/availability",
+        headers=patient_auth,
+        json={
+            "starts_at": starts_at.isoformat(),
+            "ends_at": (starts_at + timedelta(minutes=30)).isoformat(),
+        },
+    )
+    assert response.status_code == 403
