@@ -47,24 +47,24 @@ A FastAPI backend for patient registration and authentication, doctor discovery,
    ACCESS_TOKEN_EXPIRE_MINUTES=30
    ```
 
-5. Initialize or migrate the database using the correct path below. **Do not run the fresh-database commands against a database that already contains data. Back up and verify the target database first.**
+5. Initialize or migrate the database using the correct path below. **Back up existing data and verify the database URL before running any migration. Do not use a production database for first-time migration experiments.**
 
-   **Brand-new, empty database only:** the baseline migration represents an existing schema, so `alembic upgrade head` alone does not create the tables. Create the current schema from the models, then mark the migration history as applied:
+   **Brand-new, empty database only:** create an empty PostgreSQL database and run the migration chain:
 
    ```powershell
-   python .\create_tables.py
-   alembic stamp head
+   alembic upgrade head
    alembic current
    ```
 
-   **Existing database with the application's tables:** verify the database and revision before applying migrations:
+   **Existing database with the application's tables:** inspect the current revision, then run the migration chain:
 
    ```powershell
    alembic current
    alembic upgrade head
+   alembic current
    ```
 
-   If the schema is partially initialized or the revision is unexpected, stop and inspect it instead of stamping or upgrading blindly. The baseline migration is intentionally a no-op for existing schemas.
+   The baseline migration creates the schema only when none of the application's tables exist. It preserves a complete existing application schema, and the doctor-link migration adds missing doctor-account linkage without recreating existing columns, indexes, or foreign keys. A partially populated application schema causes the baseline to stop with an explicit error. Do not bypass that error with `stamp`; investigate and reconcile the schema with a backup first.
 
 6. Start the API from the project root:
 
@@ -104,7 +104,7 @@ Run the automated tests from the project root:
 python -m pytest -q
 ```
 
-GitHub Actions runs the same test suite on pushes to `main` and `fix/**` branches and on pull requests targeting `main`. The suite includes isolated SQLite-backed API tests for authentication, validation, role-scoped appointment access, consultation finalization, prescription access, idempotency, and database-readiness failure handling. These tests do not connect to or modify a production database.
+GitHub Actions runs the same test suite on pushes to `main` and `fix/**` branches and on pull requests targeting `main`. The suite includes isolated SQLite-backed API tests for authentication, validation, role-scoped appointment access, consultation finalization, prescription access, idempotency, database-readiness failure handling, and fresh/existing/partial schema migration paths. These tests do not connect to or modify a production database.
 
 ## Security notes
 
