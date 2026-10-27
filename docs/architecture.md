@@ -84,3 +84,17 @@ Before production use, still configure TLS, secret management/rotation, database
 ## Test philosophy
 
 Tests use an in-memory SQLite database and synthetic test accounts/data. They do not need production credentials and must not be pointed at a live database. CI checks dependency consistency, Python syntax compilation, and the automated suite on the configured Python matrix. SQLite integration tests verify API behavior but cannot fully simulate PostgreSQL locking, migration behavior, or production traffic; validate those separately in a disposable PostgreSQL environment before deployment.
+
+
+## Supplemental design references
+
+- Booking sequence: see [booking-sequence.mmd](booking-sequence.mmd).
+- Security risks, controls and residual gaps: see [threat-model.md](threat-model.md).
+- Metrics, structured logging, traces and alert proposals: see [observability.md](observability.md).
+- Local deployment, release checklist, incident triage and recovery: see [operations-runbook.md](operations-runbook.md).
+
+## Explicit assignment gaps
+
+The assignment requests profiles, availability slots, payments, audit logs, admin analytics, full observability and infrastructure-as-code deployment. The current ORM/domain implementation does not yet include all of those workflows. The Render Blueprint and Docker Compose configuration are starter infrastructure definitions, not evidence of a deployed high-availability environment. The k6 script is a low-volume smoke test, not evidence that 100,000 daily consultations or the stated latency/availability SLOs have been achieved.
+
+Before production claims are made, implement and test provider availability/interval-overlap constraints at the database level, an append-only clinical audit trail, admin analytics with authorization and aggregation rules, and the required payment workflow if in scope. Run concurrent booking tests on disposable PostgreSQL, measure p50/p95/p99 under representative load, configure a telemetry collector and alert delivery, and execute a database restore drill.
