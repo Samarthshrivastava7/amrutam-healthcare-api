@@ -121,7 +121,7 @@ def test_doctor_link_migration_can_be_downgraded_on_sqlite():
         with engine.begin() as connection:
             run_migration(connection, baseline)
             run_migration(connection, doctor_link)
-            doctor_link.downgrade()
+            run_migration(connection, doctor_link, direction="downgrade")
 
         inspector = sa.inspect(engine)
         doctor_columns = {column["name"] for column in inspector.get_columns("doctors")}
