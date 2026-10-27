@@ -113,3 +113,27 @@ def test_baseline_stops_on_a_partially_initialized_application_schema():
                 run_migration(connection, baseline)
     finally:
         engine.dispose()
+
+
+def test_doctor_link_migration_can_be_downgraded_on_sqlite():
+    engine = create_engine("sqlite://")
+    try:
+        with engine.begin() as connection:
+            run_migration(connection, baseline)
+            run_migration(connection, doctor_link)
+            doctor_link.downgrade()
+
+        inspector = sa.inspect(engine)
+        doctor_columns = {column["name"] for column in inspector.get_columns("doctors")}
+        assert "user_id" not in doctor_columns
+        assert not any(
+            index.get("column_names") == ["user_id"]
+            for index in inspector.get_indexes("doctors")
+        )
+        assert not any(
+            foreign_key.get("constrained_columns") == ["user_id"]
+            and foreign_key.get("referred_table") == "users"
+            for foreign_key in inspector.get_foreign_keys("doctors")
+        )
+    finally:
+        engine.dispose()
