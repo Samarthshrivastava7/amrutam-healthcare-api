@@ -20,11 +20,11 @@ from alembic.operations import Operations
 from sqlalchemy import create_engine
 
 from app.db.session import Base
-from app.models import appointment, consultation, doctor, prescription, user  # noqa: F401
+from app.models import appointment, availability_slot, consultation, doctor, prescription, user  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_PATH = ROOT / "alembic" / "versions" / "f151f0d1ce55_baseline_existing_schema.py"
-DOCTOR_LINK_PATH = ROOT / "alembic" / "versions" / "7f2dc8f87199_link_doctors_to_user_accounts.py"
+DOCTOR_LINK_PATH = ROOT / "alembic" / "versions" / "7f2dc8f87199_link_doctors_to_user_accounts.py"\nAVAILABILITY_PATH = ROOT / "alembic" / "versions" / "c84a3d91f027_add_availability_slots.py"
 
 
 def load_migration(path: Path, name: str):
@@ -36,7 +36,7 @@ def load_migration(path: Path, name: str):
 
 
 baseline = load_migration(BASELINE_PATH, "amrutam_baseline_migration")
-doctor_link = load_migration(DOCTOR_LINK_PATH, "amrutam_doctor_link_migration")
+doctor_link = load_migration(DOCTOR_LINK_PATH, "amrutam_doctor_link_migration")\navailability = load_migration(AVAILABILITY_PATH, "amrutam_availability_migration")
 
 
 def run_migration(connection, migration, direction="upgrade"):
@@ -135,5 +135,22 @@ def test_doctor_link_migration_can_be_downgraded_on_sqlite():
             and foreign_key.get("referred_table") == "users"
             for foreign_key in inspector.get_foreign_keys("doctors")
         )
+    finally:
+        engine.dispose()
+
+
+
+def test_availability_migration_can_be_downgraded_and_upgraded_on_sqlite():
+    engine = create_engine("sqlite://")
+    try:
+        with engine.begin() as connection:
+            run_migration(connection, baseline)
+            run_migration(connection, doctor_link)
+            run_migration(connection, availability)
+            assert "availability_slots" in sa.inspect(connection).get_table_names()
+            run_migration(connection, availability, direction="downgrade")
+            assert "availability_slots" not in sa.inspect(connection).get_table_names()
+            run_migration(connection, availability)
+            assert "availability_slots" in sa.inspect(connection).get_table_names()
     finally:
         engine.dispose()
