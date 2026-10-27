@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.appointment import Appointment, AppointmentStatus
+from app.models.availability_slot import AvailabilitySlot
 from app.models.doctor import Doctor
 from app.models.user import User, UserRole
 from app.schemas.appointment import AppointmentCreate, AppointmentResponse
@@ -108,6 +109,27 @@ def book_appointment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Active doctor not found",
         )
+
+    # Legacy doctors without published slots remain bookable. Once slots are
+    # configured, bookings must begin at one of the doctor's published starts.
+    has_published_slots = db.scalar(
+        select(AvailabilitySlot.id)
+        .where(AvailabilitySlot.doctor_id == data.doctor_id)
+        .limit(1)
+    )
+    if has_published_slots is not None:
+        matching_slot = db.scalar(
+            select(AvailabilitySlot.id).where(
+                AvailabilitySlot.doctor_id == data.doctor_id,
+                AvailabilitySlot.starts_at == scheduled_at,
+                AvailabilitySlot.ends_at > scheduled_at,
+            )
+        )
+        if matching_slot is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Appointment must start at a published doctor availability slot",
+            )
 
     doctor_conflict = db.scalar(
         select(Appointment.id).where(
