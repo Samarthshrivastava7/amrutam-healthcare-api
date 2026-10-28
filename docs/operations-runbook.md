@@ -54,3 +54,35 @@ Configure encrypted managed backups and point-in-time recovery where available. 
 4. Revoke or expire outstanding sessions according to incident severity.
 5. Rotate database credentials independently and verify connection pools reconnect.
 6. Never paste secrets or bearer tokens into issues, logs, screenshots or chat.
+
+
+## Backup and restore drill (operator-run; not yet executed by this repository)
+
+The commands below are examples for self-managed PostgreSQL. Managed database providers may require their native snapshot/restore workflow. Use a disposable recovery database for drills, never the live production database.
+
+```bash
+pg_dump --format=custom --no-owner --no-acl "$DATABASE_URL" > amrutam-backup.dump
+createdb amrutam_restore_check
+pg_restore --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" amrutam-backup.dump
+```
+
+After restore, run schema checks and synthetic read/write workflows; confirm expected row counts and constraints; record the measured recovery point (RPO) and recovery time (RTO). Encrypt backup artifacts, restrict access and define retention. These instructions do not imply that a backup or restore has been performed.
+
+## Pre-release verification
+
+1. Verify the exact target environment and database URL without printing secrets.
+2. Confirm a recent backup and a successful restore drill.
+3. Review `alembic current` and migration history before running `alembic upgrade head` as a controlled release step.
+4. Require passing CI, dependency audit and secret scanning.
+5. Verify `/health/live`, `/health/ready` and synthetic auth/booking/consultation workflows after deploy.
+6. Monitor request error rate, p95 latency, database connection saturation and lock waits.
+
+## Incident triage
+
+- **Readiness 503:** inspect DB health, DNS/network, TLS, credentials, migration state and connection exhaustion.
+- **Booking 409:** inspect active appointment, published availability and idempotency-key reuse.
+- **Unexpected 401/403:** check expiry, active account status and role provisioning; never ask users for tokens.
+- **Elevated latency:** use route-template logs and DB query/lock metrics; do not log bodies or clinical content.
+- **Secret exposure:** revoke/rotate immediately, assess access and follow incident response procedures.
+
+No production backup, restore, alerting, regulatory compliance or 99.95% availability is implied until verified in the target environment.
