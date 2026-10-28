@@ -168,15 +168,8 @@ def book_appointment(
     )
 
     db.add(appointment)
-    db.flush()
-    db.add(AuditLog(
-        actor_user_id=current_user.id,
-        action="appointment.booked",
-        resource_type="appointment",
-        resource_id=str(appointment.id),
-        request_id=getattr(request.state, "request_id", None),
-    ))
     try:
+        db.flush()
         db.commit()
         db.refresh(appointment)
     except IntegrityError:
