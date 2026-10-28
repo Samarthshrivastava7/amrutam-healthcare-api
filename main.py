@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.api.routes.admin_analytics import router as admin_analytics_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.doctors import router as doctors_router
 from app.api.routes.appointments import router as appointments_router
@@ -25,6 +26,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(admin_analytics_router)
 app.include_router(doctors_router)
 app.include_router(appointments_router)
 app.include_router(consultations_router)
