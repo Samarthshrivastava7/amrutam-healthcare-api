@@ -109,7 +109,7 @@ Run tests from the repository root:
 
 GitHub Actions runs dependency consistency checks, Python compilation and the automated test suite on the configured Python matrix. Most API workflow tests use isolated SQLite; CI also provisions PostgreSQL for dedicated simultaneous booking and overlapping availability tests. These tests do not prove all production failure modes or capacity targets.
 
-A k6 smoke script is provided at tests/load/k6-smoke.js. It checks liveness under synthetic traffic only; it is not a full capacity benchmark. Run only against a local or explicitly authorized non-production environment:
+k6 scripts are provided under tests/load/. The smoke script checks liveness; the bounded load profile checks readiness and database connectivity. Neither is a full capacity benchmark. Run only against a local or explicitly authorized non-production environment:
 
     k6 run tests/load/k6-smoke.js
 
@@ -122,6 +122,7 @@ Override the target with BASE_URL when needed.
 - [Architecture and design](docs/architecture.md)
 - [Security checklist and threat model](docs/threat-model.md)
 - [Observability plan](docs/observability.md)
+- [Production hardening, metrics and load-test runbook](docs/production-hardening.md)
 - [Operations runbook](docs/operations-runbook.md)
 - [Five-minute demo script](docs/demo-script.md)
 - [PostgreSQL concurrency integration tests](tests/test_postgres_concurrency.py)
