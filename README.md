@@ -95,6 +95,7 @@ Do not expose PostgreSQL publicly. Back up and verify the target database before
 | Authentication | POST /auth/register, POST /auth/login, GET /auth/me |
 | Doctors | GET /doctors/, GET /doctors/{doctor_id}, POST /doctors/ (admin only), POST /doctors/me/availability (doctor), GET /doctors/{doctor_id}/availability |
 | Appointments | POST /appointments/, GET /appointments/me, GET /appointments/{appointment_id}, POST /appointments/{appointment_id}/cancel |
+| Admin analytics | GET /admin/analytics/overview (admin only) |
 | Consultations | POST /consultations/, GET /consultations/me, PATCH /consultations/{consultation_id}, POST /consultations/{consultation_id}/complete |
 | Prescriptions | POST /prescriptions/, GET /prescriptions/me |
 
@@ -128,9 +129,9 @@ Override the target with BASE_URL when needed.
 
 ## Security and production readiness
 
-Implemented controls include Argon2 password hashes, expiring JWTs, startup validation for token configuration, fixed patient role during public registration, admin-only doctor profile creation, role-scoped data access, typed schemas, and generic readiness errors.
+Implemented controls include Argon2 password hashes, expiring JWTs, startup validation for token configuration, fixed patient role during public registration, admin-only doctor profile creation and aggregate analytics, role-scoped data access, metadata-only audit events for appointment booking/cancellation, typed schemas, and generic readiness errors.
 
-Before real patient data or production use, complete and verify TLS/host restrictions, managed secret rotation, login/registration rate limiting, privileged-account MFA, clinical-record audit logging, retention policy, dependency/secret scanning, operational alerting, and encrypted backup/restore drills. Availability slots and basic overlap checks are implemented. Database-level protection against concurrent overlapping availability creation still needs PostgreSQL-specific validation; booking slot enforcement is enabled for doctors who have published slots, while legacy doctors with no slots remain bookable for compatibility. Payments, admin analytics, distributed rate limiting, privileged-account MFA, clinical-record audit logging, and a configured production telemetry backend are not currently represented as complete features. The project does not claim regulatory compliance or a 99.95% availability guarantee.
+Before real patient data or production use, complete and verify TLS/host restrictions, managed secret rotation, login/registration rate limiting, privileged-account MFA, audit coverage for authentication and all clinical-record mutations, retention policy, dependency/secret scanning, operational alerting, backup/restore drills, and PostgreSQL concurrency/load tests. Availability slots and aggregate admin analytics are implemented; payments, distributed rate limiting, full clinical audit coverage, and a configured production telemetry backend are not complete. The project does not claim regulatory compliance or a 99.95% availability guarantee.
 
 ## Demo safety
 
