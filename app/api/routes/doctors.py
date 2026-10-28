@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.routes.auth import get_current_user
@@ -20,7 +21,7 @@ def _doctor_for_user(db: Session, user: User) -> Doctor:
     if user.role != UserRole.DOCTOR:
         raise HTTPException(status_code=403, detail="Doctor account required")
     doctor = db.scalar(
-        select(Doctor).where(Doctor.user_id == user.id, Doctor.is_active.is_(True))
+        select(Doctor).where(Doctor.user_id == user.id, Doctor.is_active.is_(True)).with_for_update()
     )
     if doctor is None:
         raise HTTPException(status_code=403, detail="No active doctor profile linked")
@@ -71,9 +72,9 @@ def create_my_availability(
     try:
         db.commit()
         db.refresh(slot)
-    except Exception:
+    except IntegrityError:
         db.rollback()
-        raise
+        raise HTTPException(status_code=409, detail="Availability conflicts with an existing slot")
     return slot
 
 
