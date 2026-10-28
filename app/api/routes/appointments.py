@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.appointment import Appointment, AppointmentStatus
 from app.models.availability_slot import AvailabilitySlot
+from app.models.audit_log import AuditLog
 from app.models.doctor import Doctor
 from app.models.user import User, UserRole
 from app.schemas.appointment import AppointmentCreate, AppointmentResponse
@@ -52,6 +53,7 @@ def require_doctor(user: User, db: Session) -> Doctor:
 )
 def book_appointment(
     data: AppointmentCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     idempotency_key: str | None = Header(
@@ -166,6 +168,14 @@ def book_appointment(
     )
 
     db.add(appointment)
+    db.flush()
+    db.add(AuditLog(
+        actor_user_id=current_user.id,
+        action="appointment.booked",
+        resource_type="appointment",
+        resource_id=str(appointment.id),
+        request_id=getattr(request.state, "request_id", None),
+    ))
     try:
         db.commit()
         db.refresh(appointment)
@@ -242,6 +252,7 @@ def get_my_appointment(
 )
 def cancel_my_appointment(
     appointment_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -269,6 +280,13 @@ def cancel_my_appointment(
         )
 
     appointment.status = AppointmentStatus.CANCELLED
+    db.add(AuditLog(
+        actor_user_id=current_user.id,
+        action="appointment.cancelled",
+        resource_type="appointment",
+        resource_id=str(appointment.id),
+        request_id=getattr(request.state, "request_id", None),
+    ))
     db.commit()
     db.refresh(appointment)
 
