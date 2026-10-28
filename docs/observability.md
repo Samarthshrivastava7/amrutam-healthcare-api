@@ -48,3 +48,10 @@ Assignment targets are read p95 < 200 ms, write p95 < 500 ms, 99.95% availabilit
 ## Current CI and smoke-test status
 
 The repository now includes PostgreSQL concurrency tests in GitHub Actions and a dependency/secret scanning workflow. A k6 health smoke script exists, but no successful k6 execution, external metrics backend, trace collector, dashboard or paging alert has been verified here. Do not describe the proposed alert thresholds as active production alerts.
+
+
+## Implemented telemetry baseline
+
+The API now includes Prometheus request count and duration metrics with bounded labels (method, route template and status class). The /metrics endpoint is disabled unless METRICS_BEARER_TOKEN is configured and then requires bearer authentication. Metrics are process-local and need an external scraper/backend to aggregate across instances. No dashboard, alert delivery, trace collector or external monitoring service is deployed by these repository changes. See [production hardening runbook](production-hardening.md).
+
+The application can optionally enforce TRUSTED_HOSTS, HTTPS_REDIRECT and CORS_ORIGINS. These are not enabled automatically in the live environment; configure and verify them in hosting settings before claiming the corresponding control is active. The repository does not yet implement distributed rate limiting or MFA.
