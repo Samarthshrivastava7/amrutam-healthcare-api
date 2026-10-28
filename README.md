@@ -109,7 +109,7 @@ Run tests from the repository root:
 
 GitHub Actions runs dependency consistency checks, Python compilation and the automated test suite on the configured Python matrix. Tests use isolated synthetic data and SQLite; they must not connect to production. SQLite tests do not prove PostgreSQL row-locking behavior, migration safety against all real schemas, or production load capacity.
 
-A small k6 smoke script is provided at tests/load/k6-smoke.js. It only checks liveness under light synthetic traffic; it is not a full capacity benchmark. Run only against a local or explicitly authorized non-production environment:
+A k6 smoke script is provided at tests/load/k6-smoke.js. It checks liveness under synthetic traffic only; it is not a full capacity benchmark. Run only against a local or explicitly authorized non-production environment:
 
     k6 run tests/load/k6-smoke.js
 
@@ -121,6 +121,9 @@ Override the target with BASE_URL when needed.
 - [Security checklist and threat model](docs/threat-model.md)
 - [Observability plan](docs/observability.md)
 - [Operations runbook](docs/operations-runbook.md)
+- [Five-minute demo script](docs/demo-script.md)
+- [PostgreSQL concurrency integration tests](tests/test_postgres_concurrency.py)
+- [Dependency and secret scanning workflow](.github/workflows/security.yml)
 - [High-level architecture diagram](docs/high-level-architecture.mmd)
 - [ER diagram for implemented core entities](docs/er-diagram.mmd)
 - [Booking sequence diagram source](docs/booking-sequence.mmd)
@@ -131,7 +134,7 @@ Override the target with BASE_URL when needed.
 
 Implemented controls include Argon2 password hashes, expiring JWTs, startup validation for token configuration, fixed patient role during public registration, admin-only doctor profile creation and aggregate analytics, role-scoped data access, metadata-only audit events for appointment booking/cancellation, typed schemas, and generic readiness errors.
 
-Before real patient data or production use, complete and verify TLS/host restrictions, managed secret rotation, login/registration rate limiting, privileged-account MFA, audit coverage for authentication and all clinical-record mutations, retention policy, dependency/secret scanning, operational alerting, backup/restore drills, and PostgreSQL concurrency/load tests. Availability slots and aggregate admin analytics are implemented; payments, distributed rate limiting, full clinical audit coverage, and a configured production telemetry backend are not complete. The project does not claim regulatory compliance or a 99.95% availability guarantee.
+Before real patient data or production use, complete and verify TLS/host restrictions, managed secret rotation, login/registration rate limiting, privileged-account MFA, audit coverage for authentication and all clinical-record mutations, retention policy, operational alerting, backup/restore drills, and full PostgreSQL performance/load tests. CI now includes a PostgreSQL concurrency suite plus a scheduled dependency/secret scanning workflow; these checks must still be observed passing on GitHub before claiming verified status. Availability slots and aggregate admin analytics are implemented; payments, distributed rate limiting, full clinical audit coverage, and a configured production telemetry backend are not complete. The project does not claim regulatory compliance or a 99.95% availability guarantee.
 
 ## Demo safety
 
