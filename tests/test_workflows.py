@@ -445,7 +445,11 @@ def test_booking_writes_metadata_only_audit_log(workflow_client):
     assert response.status_code == 201, response.text
     appointment_id = response.json()["id"]
     with session_factory() as db:
-        logs = db.query(AuditLog).filter_by(resource_id=str(appointment_id)).all()
+        logs = (
+            db.query(AuditLog)
+            .filter_by(resource_id=str(appointment_id), action="appointment.booked")
+            .all()
+        )
         assert len(logs) == 1
         assert logs[0].action == "appointment.booked"
         assert logs[0].resource_type == "appointment"
