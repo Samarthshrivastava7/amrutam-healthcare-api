@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.appointment import Appointment, AppointmentStatus
+from app.models.audit_log import AuditLog
 from app.models.consultation import Consultation
 from app.models.doctor import Doctor
 from app.models.user import User, UserRole
@@ -48,6 +49,7 @@ def require_doctor(user: User, db: Session) -> Doctor:
 )
 def start_consultation(
     data: ConsultationStart,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -86,6 +88,14 @@ def start_consultation(
     db.add(consultation)
 
     try:
+        db.flush()
+        db.add(AuditLog(
+            actor_user_id=current_user.id,
+            action="consultation.started",
+            resource_type="consultation",
+            resource_id=str(consultation.id),
+            request_id=getattr(request.state, "request_id", None),
+        ))
         db.commit()
         db.refresh(consultation)
     except IntegrityError:
@@ -128,6 +138,7 @@ def list_my_consultations(
 def update_consultation_notes(
     consultation_id: int,
     data: ConsultationUpdate,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -153,6 +164,13 @@ def update_consultation_notes(
         )
 
     consultation.notes = data.notes
+    db.add(AuditLog(
+        actor_user_id=current_user.id,
+        action="consultation.notes_updated",
+        resource_type="consultation",
+        resource_id=str(consultation.id),
+        request_id=getattr(request.state, "request_id", None),
+    ))
     db.commit()
     db.refresh(consultation)
     return consultation
@@ -164,6 +182,7 @@ def update_consultation_notes(
 )
 def complete_consultation(
     consultation_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -191,6 +210,13 @@ def complete_consultation(
 
     consultation.completed_at = datetime.now(timezone.utc)
     appointment.status = AppointmentStatus.COMPLETED
+    db.add(AuditLog(
+        actor_user_id=current_user.id,
+        action="consultation.completed",
+        resource_type="consultation",
+        resource_id=str(consultation.id),
+        request_id=getattr(request.state, "request_id", None),
+    ))
 
     db.commit()
     db.refresh(consultation)
