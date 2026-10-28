@@ -24,7 +24,8 @@ from app.models import appointment, availability_slot, consultation, doctor, pre
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_PATH = ROOT / "alembic" / "versions" / "f151f0d1ce55_baseline_existing_schema.py"
-DOCTOR_LINK_PATH = ROOT / "alembic" / "versions" / "7f2dc8f87199_link_doctors_to_user_accounts.py"\nAVAILABILITY_PATH = ROOT / "alembic" / "versions" / "c84a3d91f027_add_availability_slots.py"
+DOCTOR_LINK_PATH = ROOT / "alembic" / "versions" / "7f2dc8f87199_link_doctors_to_user_accounts.py"
+AVAILABILITY_PATH = ROOT / "alembic" / "versions" / "c84a3d91f027_add_availability_slots.py"
 
 
 def load_migration(path: Path, name: str):
@@ -36,7 +37,8 @@ def load_migration(path: Path, name: str):
 
 
 baseline = load_migration(BASELINE_PATH, "amrutam_baseline_migration")
-doctor_link = load_migration(DOCTOR_LINK_PATH, "amrutam_doctor_link_migration")\navailability = load_migration(AVAILABILITY_PATH, "amrutam_availability_migration")
+doctor_link = load_migration(DOCTOR_LINK_PATH, "amrutam_doctor_link_migration")
+availability = load_migration(AVAILABILITY_PATH, "amrutam_availability_migration")
 
 
 def run_migration(connection, migration, direction="upgrade"):
