@@ -35,6 +35,7 @@ app.include_router(prescriptions_router)
 async def request_observability(request: Request, call_next):
     """Emit privacy-safe structured request logs and basic hardening headers."""
     request_id = str(uuid.uuid4())
+    request.state.request_id = request_id
     started = time.perf_counter()
     status_code = 500
 
