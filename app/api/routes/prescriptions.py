@@ -1,10 +1,11 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.routes.auth import get_current_user
 from app.db.session import get_db
 from app.models.appointment import Appointment
+from app.models.audit_log import AuditLog
 from app.models.consultation import Consultation
 from app.models.doctor import Doctor
 from app.models.prescription import Prescription
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/prescriptions", tags=["Prescriptions"])
 @router.post("/", response_model=PrescriptionResponse, status_code=201)
 def create_prescription(
     data: PrescriptionCreate,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -49,6 +51,14 @@ def create_prescription(
         instructions=data.instructions.strip() if data.instructions else None,
     )
     db.add(prescription)
+    db.flush()
+    db.add(AuditLog(
+        actor_user_id=current_user.id,
+        action="prescription.created",
+        resource_type="prescription",
+        resource_id=str(prescription.id),
+        request_id=getattr(request.state, "request_id", None),
+    ))
     db.commit()
     db.refresh(prescription)
     return prescription
