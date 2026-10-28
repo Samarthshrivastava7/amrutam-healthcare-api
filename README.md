@@ -107,7 +107,7 @@ Run tests from the repository root:
 
     python -m pytest -q
 
-GitHub Actions runs dependency consistency checks, Python compilation and the automated test suite on the configured Python matrix. Tests use isolated synthetic data and SQLite; they must not connect to production. SQLite tests do not prove PostgreSQL row-locking behavior, migration safety against all real schemas, or production load capacity.
+GitHub Actions runs dependency consistency checks, Python compilation and the automated test suite on the configured Python matrix. Most API workflow tests use isolated SQLite; CI also provisions PostgreSQL for dedicated simultaneous booking and overlapping availability tests. These tests do not prove all production failure modes or capacity targets.
 
 A k6 smoke script is provided at tests/load/k6-smoke.js. It checks liveness under synthetic traffic only; it is not a full capacity benchmark. Run only against a local or explicitly authorized non-production environment:
 
