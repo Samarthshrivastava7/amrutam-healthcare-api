@@ -20,6 +20,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.security import hash_password
 from app.db.session import Base, get_db
+from app.models.audit_log import AuditLog
 from app.models.doctor import Doctor
 from app.models.user import User, UserRole
 from main import app
@@ -433,3 +434,51 @@ def test_patient_cannot_publish_doctor_availability(workflow_client):
         },
     )
     assert response.status_code == 403
+
+
+
+def test_booking_writes_metadata_only_audit_log(workflow_client):
+    client, session_factory = workflow_client
+    patient_auth = register_and_login_patient(client)
+    doctor_id = create_doctor_account(session_factory)
+    response, _ = book_appointment(client, patient_auth, doctor_id)
+    assert response.status_code == 201, response.text
+    appointment_id = response.json()["id"]
+    with session_factory() as db:
+        logs = db.query(AuditLog).filter_by(resource_id=str(appointment_id)).all()
+        assert len(logs) == 1
+        assert logs[0].action == "appointment.booked"
+        assert logs[0].resource_type == "appointment"
+        assert logs[0].actor_user_id is not None
+        assert not hasattr(logs[0], "clinical_notes")
+
+
+def test_admin_analytics_requires_admin_and_returns_aggregates(workflow_client):
+    client, session_factory = workflow_client
+    patient_auth = register_and_login_patient(client)
+    denied = client.get("/admin/analytics/overview", headers=patient_auth)
+    assert denied.status_code == 403
+
+    with session_factory() as db:
+        admin = User(
+            full_name="Test Admin",
+            email="admin@example.com",
+            password_hash=hash_password("StrongAdminPassword123!"),
+            role=UserRole.ADMIN,
+            is_active=True,
+        )
+        db.add(admin)
+        db.commit()
+    login = client.post(
+        "/auth/login",
+        json={"email": "admin@example.com", "password": "StrongAdminPassword123!"},
+    )
+    assert login.status_code == 200, login.text
+    admin_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    response = client.get("/admin/analytics/overview", headers=admin_headers)
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert "users_by_role" in payload
+    assert "appointments_by_status" in payload
+    assert "consultations_total" in payload
+    assert "generated_at" in payload
