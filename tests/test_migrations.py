@@ -53,6 +53,7 @@ def test_fresh_database_can_upgrade_to_current_schema():
         with engine.begin() as connection:
             run_migration(connection, baseline)
             run_migration(connection, doctor_link)
+            run_migration(connection, availability)
 
         inspector = sa.inspect(engine)
         assert {
@@ -61,6 +62,7 @@ def test_fresh_database_can_upgrade_to_current_schema():
             "appointments",
             "consultations",
             "prescriptions",
+            "availability_slots",
         }.issubset(set(inspector.get_table_names()))
 
         doctor_columns = {column["name"] for column in inspector.get_columns("doctors")}
