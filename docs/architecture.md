@@ -98,3 +98,70 @@ Tests use an in-memory SQLite database and synthetic test accounts/data. They do
 The assignment requests profiles, availability slots, payments, audit logs, admin analytics, full observability and infrastructure-as-code deployment. The current ORM/domain implementation does not yet include all of those workflows. The Render Blueprint and Docker Compose configuration are starter infrastructure definitions, not evidence of a deployed high-availability environment. The k6 script is a low-volume smoke test, not evidence that 100,000 daily consultations or the stated latency/availability SLOs have been achieved.
 
 Before production claims are made, implement and test provider availability/interval-overlap constraints at the database level, an append-only clinical audit trail, admin analytics with authorization and aggregation rules, and the required payment workflow if in scope. Run concurrent booking tests on disposable PostgreSQL, measure p50/p95/p99 under representative load, configure a telemetry collector and alert delivery, and execute a database restore drill.
+
+
+## Assignment traceability addendum
+
+### Component architecture
+
+```mermaid
+flowchart TB
+  Client[Web / Mobile Client] --> API[FastAPI Application]
+  API --> Auth[JWT Authentication + RBAC]
+  API --> Doctor[Doctor Discovery + Availability]
+  API --> Booking[Booking + Idempotency]
+  API --> Clinical[Consultations + Prescriptions]
+  API --> Admin[Admin Aggregate Analytics]
+  Auth --> DB[(PostgreSQL)]
+  Doctor --> DB
+  Booking --> DB
+  Clinical --> DB
+  Admin --> DB
+  Booking --> Audit[Metadata Audit Events]
+  Audit --> DB
+  API --> Logs[Privacy-Safe Structured Logs]
+  API --> Health[Health / Readiness]
+```
+
+### Core data model
+
+```mermaid
+erDiagram
+  USERS ||--o| DOCTORS : owns
+  USERS ||--o{ APPOINTMENTS : books
+  DOCTORS ||--o{ APPOINTMENTS : receives
+  DOCTORS ||--o{ AVAILABILITY_SLOTS : publishes
+  APPOINTMENTS ||--o| CONSULTATIONS : has
+  CONSULTATIONS ||--o{ PRESCRIPTIONS : produces
+  USERS ||--o{ AUDIT_LOGS : performs
+```
+
+### Booking sequence
+
+```mermaid
+sequenceDiagram
+  actor Patient
+  participant API as FastAPI
+  participant DB as PostgreSQL
+  Patient->>API: POST /appointments + Bearer token
+  API->>API: Validate role, schema and idempotency key
+  API->>DB: Lock active doctor row
+  API->>DB: Check availability and booking conflicts
+  alt Conflict exists
+    API-->>Patient: 409 Conflict
+  else Slot is acceptable
+    API->>DB: Insert appointment + audit event in transaction
+    DB-->>API: Commit
+    API-->>Patient: 201 Created
+  end
+```
+
+### Concurrency and measured targets
+
+Booking and availability writes lock the relevant doctor row with `SELECT ... FOR UPDATE` on PostgreSQL, then perform conflict checks inside the transaction. CI now provisions PostgreSQL and runs concurrency tests for simultaneous booking and overlapping availability creation. Passing CI is evidence for those test scenarios only; it does not prove all isolation, rescheduling, failover or production load cases.
+
+The assignment targets (100,000 consultations/day, p95 reads under 200 ms, p95 writes under 500 ms and 99.95% availability) remain unverified targets. The k6 script is only a low-volume health/readiness smoke test. A representative workload, realistic data, capacity tests, fault injection and sustained monitoring are required before making performance or availability claims.
+
+### Security boundary and known gaps
+
+The app uses Argon2 password hashes, expiring JWTs, patient-only public registration, role-scoped access, metadata-only appointment audit events and privacy-safe route-template logs. Remaining production work includes privileged-user MFA, distributed rate limiting, complete clinical/authentication audit coverage, key rotation, retention policy, external metrics/traces/alerts and verified backup/restore drills. No regulatory compliance claim is made.
