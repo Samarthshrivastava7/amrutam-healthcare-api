@@ -117,6 +117,8 @@ Override the target with BASE_URL when needed.
 
 ## Design and operations documents
 
+- [Technical submission report and acceptance/status matrix](docs/technical-submission-report.md)
+
 - [Architecture and design](docs/architecture.md)
 - [Security checklist and threat model](docs/threat-model.md)
 - [Observability plan](docs/observability.md)
