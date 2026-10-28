@@ -15,7 +15,9 @@ A modular FastAPI backend for patient identity, doctor discovery, appointment bo
 ## Current capabilities
 
 - Patient registration, login and current-user endpoint
-- Admin-controlled doctor profile creation and public active-doctor discovery/filtering\n- Doctor-owned future availability windows, overlap validation, and public time-window discovery\n- Booking validation against published slot start times once a doctor has configured availability
+- Admin-controlled doctor profile creation and public active-doctor discovery/filtering
+- Doctor-owned future availability windows, overlap validation, and public time-window discovery
+- Booking validation against published slot start times once a doctor has configured availability
 - Patient appointment booking/cancellation and patient/assigned-doctor record access
 - Idempotency-key replay handling for appointment writes
 - Assigned-doctor consultation lifecycle and prescription creation/retrieval
