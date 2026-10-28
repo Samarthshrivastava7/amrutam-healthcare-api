@@ -22,9 +22,24 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: amrutam_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d amrutam_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://test:test@127.0.0.1:5432/amrutam_test
-      JWT_SECRET_KEY: test-only-secret-not-for-production
+      POSTGRES_TEST_URL: postgresql+psycopg://test:test@127.0.0.1:5432/amrutam_test
+      JWT_SECRET_KEY: test-only-secret-not-for-production-123456
       JWT_ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: "30"
     steps:
