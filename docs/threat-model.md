@@ -58,3 +58,12 @@ Trust boundaries: public internet → TLS proxy/rate limits → FastAPI routes a
 ## Residual risk and honest scope
 
 This is an assignment backend, not a production-certified telemedicine platform. MFA, a public self-service password reset, distributed rate limiting, clinical audit logging, full doctor availability/overlap scheduling, payments, admin analytics, a configured production telemetry backend, and a verified backup/restore process must not be claimed as implemented unless separately built and tested.
+
+
+## Implemented since initial checklist
+
+- Metadata-only audit events are written transactionally for appointment booking and cancellation.
+- A PostgreSQL CI service runs simultaneous booking and overlapping-availability integration tests.
+- A scheduled dependency audit and repository secret scan workflow is configured.
+
+These are repository changes, not evidence that the latest workflow has passed. Privileged-account MFA, distributed rate limiting and complete audit coverage remain open controls.
