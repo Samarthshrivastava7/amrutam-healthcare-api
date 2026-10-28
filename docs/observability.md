@@ -43,3 +43,8 @@ Allowed metric labels: bounded route template, HTTP method, status class and dep
 ## SLO validation
 
 Assignment targets are read p95 < 200 ms, write p95 < 500 ms, 99.95% availability and 100,000 consultations/day. Use authorized representative load tests and record environment, dataset size, p50/p95/p99, throughput, errors and resource saturation. The included k6 script is only a liveness smoke test and cannot prove these targets.
+
+
+## Current CI and smoke-test status
+
+The repository now includes PostgreSQL concurrency tests in GitHub Actions and a dependency/secret scanning workflow. A k6 health smoke script exists, but no successful k6 execution, external metrics backend, trace collector, dashboard or paging alert has been verified here. Do not describe the proposed alert thresholds as active production alerts.
