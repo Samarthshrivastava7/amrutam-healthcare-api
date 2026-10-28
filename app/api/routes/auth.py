@@ -15,6 +15,7 @@ from app.core.config import (
 )
 from app.core.security import hash_password, verify_password
 from app.db.session import get_db
+from app.models.audit_log import AuditLog
 from app.models.user import User, UserRole
 from app.schemas.user import UserLogin, UserRegister, UserResponse, TokenResponse
 
@@ -68,7 +69,11 @@ def get_current_user(
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register_user(data: UserRegister, db: Session = Depends(get_db)):
+def register_user(
+    data: UserRegister,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     email = str(data.email).strip().lower()
 
     existing_user = db.scalar(select(User).where(User.email == email))
@@ -87,6 +92,14 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
     db.add(user)
 
     try:
+        db.flush()
+        db.add(AuditLog(
+            actor_user_id=user.id,
+            action="auth.registered",
+            resource_type="user",
+            resource_id=str(user.id),
+            request_id=getattr(request.state, "request_id", None),
+        ))
         db.commit()
         db.refresh(user)
     except IntegrityError:
@@ -100,7 +113,11 @@ def register_user(data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login_user(data: UserLogin, db: Session = Depends(get_db)):
+def login_user(
+    data: UserLogin,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     email = str(data.email).strip().lower()
     user = db.scalar(select(User).where(User.email == email))
 
@@ -115,10 +132,21 @@ def login_user(data: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    db.add(AuditLog(
+        actor_user_id=user.id,
+        action="auth.login_succeeded",
+        resource_type="user",
+        resource_id=str(user.id),
+        request_id=getattr(request.state, "request_id", None),
+    ))
+    db.commit()
+
     return {
         "access_token": create_access_token(user),
         "token_type": "bearer",
     }
+
+
 @router.get("/me", response_model=UserResponse)
 def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
