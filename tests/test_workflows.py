@@ -482,3 +482,39 @@ def test_admin_analytics_requires_admin_and_returns_aggregates(workflow_client):
     assert "appointments_by_status" in payload
     assert "consultations_total" in payload
     assert "generated_at" in payload
+
+def test_registration_and_successful_login_write_metadata_audit_logs(workflow_client):
+    client, session_factory = workflow_client
+    registered = client.post(
+        "/auth/register",
+        json={
+            "full_name": "Audit Test Patient",
+            "email": "audit-patient@example.com",
+            "password": PATIENT_PASSWORD,
+        },
+    )
+    assert registered.status_code == 201, registered.text
+
+    logged_in = client.post(
+        "/auth/login",
+        json={
+            "email": "audit-patient@example.com",
+            "password": PATIENT_PASSWORD,
+        },
+    )
+    assert logged_in.status_code == 200, logged_in.text
+
+    with session_factory() as db:
+        logs = (
+            db.query(AuditLog)
+            .filter(AuditLog.resource_type == "user")
+            .order_by(AuditLog.id.asc())
+            .all()
+        )
+        assert [log.action for log in logs] == [
+            "auth.registered",
+            "auth.login_succeeded",
+        ]
+        assert all(log.actor_user_id == registered.json()["id"] for log in logs)
+        assert all(not hasattr(log, "password") for log in logs)
+
